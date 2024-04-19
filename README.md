@@ -19,3 +19,15 @@ Modules neccessary:
 - Expand to detect different tags simultaneously
 - Module to operate solenoid (Lock)
 - Userspace program (potentially)
+
+# Pinout
+| MFRC522 | BeagleBoard        |
+|---------|--------------------|
+| SDA     | P9_17 (SPIO_CSO)   |
+| SCK     | P9_22 (SPIO_SCLK)  |
+| MOSI    | P9_18 (SPIO_D1)    |
+| MISO    | P9_21 (SPIO_DO)    |
+| IRQ     | P8_12 (GPIO_44)    |
+| GND     | P9_45 (DGND)       |
+| RST     | P8_10 (GPIO_68)    |
+| 3.3V    | P9_03 (VDD 3.3 V)  |
