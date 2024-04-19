@@ -2,12 +2,13 @@
 
 #include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/module.h>
 #include <linux/init.h>
 #include <linux/gpio.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/device.h>
+#include <linux/spi/spi.h>
+#include <linux/dekay.h>
 
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Alex Melnick and Alfonso Meraz");
@@ -15,7 +16,8 @@ MODULE_DESCRIPTION("Linux driver for encoding NFC tags");
 
 static int major = 61;
 
-#define GPIO_ANTENNA_RST 68
+#define GPIO_RST 68
+#define GPIO_IRQ 44
 
 static bool DEBUG = true;
 
@@ -29,6 +31,8 @@ static struct file_operations fops = {
     .write = NFC_tag_write,
     .open = NFC_tag_open
 };
+
+static struct spi_device *MFRC522_spi_device
 
 static int __init NFC_tag_init(void) {
     int result;
@@ -45,20 +49,34 @@ static int __init NFC_tag_init(void) {
     }
 
     // Set up the GPIO
-    result = gpio_request(GPIO_ANTENNA_RST, "ANTENNA_RST");
+    result = gpio_request(GPIO_RST, "RST");
     if (result < 0) {
-        printk(KERN_WARNING "NFC_tag: unable to request GPIO %d\n", GPIO_ANTENNA_RST);
+        printk(KERN_WARNING "NFC_tag: unable to request GPIO %d\n", GPIO_RST);
         return result;
     } else if (DEBUG) {
-        printk(KERN_INFO "NFC_tag: requested GPIO %d\n", GPIO_ANTENNA_RST);
+        printk(KERN_INFO "NFC_tag: requested GPIO %d\n", GPIO_RST);
+    }
+    result = gpio_direction_output(GPIO_RST, 1);
+    if (result < 0) {
+        printk(KERN_WARNING "NFC_tag: unable to set GPIO %d as output\n", GPIO_RST);
+        return result;
+    } else if (DEBUG) {
+        printk(KERN_INFO "NFC_tag: set GPIO %d as output\n", GPIO_RST);
     }
 
-    result = gpio_direction_output(GPIO_ANTENNA_RST, 1);
+    result = gpio_request(GPIO_IRQ, "IRQ");
     if (result < 0) {
-        printk(KERN_WARNING "NFC_tag: unable to set GPIO %d as output\n", GPIO_ANTENNA_RST);
+        printk(KERN_WARNING "NFC_tag: unable to request GPIO %d\n", GPIO_IRQ);
         return result;
     } else if (DEBUG) {
-        printk(KERN_INFO "NFC_tag: set GPIO %d as output\n", GPIO_ANTENNA_RST);
+        printk(KERN_INFO "NFC_tag: requested GPIO %d\n", GPIO_IRQ);
+    }
+    result = gpio_direction_input(GPIO_IRQ);
+    if (result < 0) {
+        printk(KERN_WARNING "NFC_tag: unable to set GPIO %d as input\n", GPIO_IRQ);
+        return result;
+    } else if (DEBUG) {
+        printk(KERN_INFO "NFC_tag: set GPIO %d as input\n", GPIO_IRQ);
     }
 }
 
