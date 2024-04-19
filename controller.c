@@ -5,6 +5,7 @@
 #include <linux/gpio.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
+#include "solenoid.h"
 
 #define SOLENOID_GPIO_PIN 50 // Need to change GPIO pin number for solenoid
 #define NUM_TOKENS_REQUIRED 2  // Number of tokens required to unlock
@@ -44,33 +45,6 @@ int initialize_nfc() {
 
 void cleanup_nfc() {
     // Disable NFC, free resources
-}
-
-int initialize_solenoid(int gpio_pin) {
-    int result;
-    result = gpio_request(gpio_pin, "solenoid_gpio");
-    if (result) {
-        printk(KERN_ERR "Unable to request GPIO %d for solenoid: %d\n", gpio_pin, result);
-        return result;
-    }
-
-    gpio_direction_output(gpio_pin, 1);  // Set the GPIO as a high output, locking the solenoid
-    return 0;
-}
-
-void cleanup_solenoid(int gpio_pin) {
-    gpio_set_value(gpio_pin, 1);  // Ensure solenoid is locked
-    gpio_free(gpio_pin);          // Release the GPIO
-}
-
-void activate_solenoid(int gpio_pin) {
-    gpio_set_value(gpio_pin, 0);  // Set GPIO low to unlock
-    printk(KERN_INFO "Solenoid Unlocked\n");
-}
-
-void deactivate_solenoid(int gpio_pin) {
-    gpio_set_value(gpio_pin, 1);  // Set GPIO high to lock
-    printk(KERN_INFO "Solenoid Locked\n");
 }
 
 
