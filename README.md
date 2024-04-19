@@ -7,9 +7,9 @@ when the 2 of the 3 NFC tokens are in close proximity.
 
 Materials:
 - Beagleboard (1)
-- Antenna Module (1)
-- NFC Tokens (3) 
-- Solenoid Lock (1)
+- Antenna Module (NXP MFRC52202HN1) (1)
+- NFC Tokens (S50) (3) 
+- Linear Solenoid (uxcell a14092600ux0438) (1)
 
 Modules neccessary:
 - Main kernel module
@@ -19,5 +19,3 @@ Modules neccessary:
 - Expand to detect different tags simultaneously
 - Module to operate solenoid (Lock)
 - Userspace program (potentially)
-
-
