@@ -11,7 +11,7 @@ Materials:
 - NFC Tokens (S50) (3) 
 - Linear Solenoid (uxcell a14092600ux0438) (1)
 
-Modules neccessary:
+Modules necessary:
 - Main kernel module
 - Programming module for tags
 - Detector module for antenna to tag
