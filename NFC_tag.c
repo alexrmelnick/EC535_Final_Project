@@ -1,4 +1,4 @@
-// This kernal module is used to encode the NFC tag data onto the NFC tag
+// * This kernal module is used to encode the NFC tag data onto the NFC tag
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -27,6 +27,8 @@ static int NFC_tag_open(struct inode *inode, struct file *file);
 static int mfrc522_spi_init(void);
 static int mfrc522_spi_write_then_read(struct spi_device *spi, const void *txbuf, unsigned n_tx, void *rxbuf, unsigned n_rx);
 
+static int write_to_NFC_tag(struct spi_device *spi, unsigned char block_addr, const unsigned char *data, size_t data_len);
+
 static struct file_operations fops = {
     .owner = THIS_MODULE,
     .read = NFC_tag_read,
@@ -43,9 +45,9 @@ static int mfrc522_spi_init(void)
         .modalias = "mfrc522",
         .max_speed_hz = 1000000,  // Speed of SPI bus (1MHz)
         .mode = SPI_MODE_0,
-        .bus_num = 1,            // SPI bus number (FIXME: not 100% sure this is the correct number)
+        .bus_num = 1,            // ? SPI bus number (not 100% sure this is the correct number)
         .chip_select = 0,        // SPI chip select - we have only one device connected
-        .platform_data = NULL,   // FIXME: can leave as NULL for simple configurations - not sure if this qualifies
+        .platform_data = NULL,   // ? can leave as NULL for simple configurations - not sure if this qualifies
     };
 
     master = spi_busnum_to_master(spi_device_info.bus_num);
@@ -74,10 +76,10 @@ static int mfrc522_spi_init(void)
 static int mfrc522_spi_write_then_read(struct spi_device *spi, const void *txbuf, unsigned n_tx, void *rxbuf, unsigned n_rx)
 {
     /* 
-        *struct spi_device spi: Pointer to the SPI device structure; represents the SPI slave device.
-        *const void txbuf: Pointer to the buffer containing the data to be transmitted.
+        ptr *struct spi_device spi: Pointer to the SPI device structure; represents the SPI slave device.
+        ptr *const void txbuf: Pointer to the buffer containing the data to be transmitted.
         unsigned n_tx: Number of bytes to transmit.
-        *void rxbuf: Pointer to the buffer where the received data will be stored.
+        ptr *void rxbuf: Pointer to the buffer where the received data will be stored.
         unsigned n_rx: Number of bytes expected to be received.
     */
 
@@ -162,7 +164,27 @@ static void __exit NFC_tag_exit(void) {
     unregister_chrdev(major, "NFC_tag");
 
     // Free the GPIO
-    gpio_free(GPIO_ANTENNA_RST);
+    gpio_free(GPIO_RST);
+}
+
+static ssize_t NFC_tag_read(struct file *file, char *buffer, size_t length, loff_t *offset) {
+    // TODO: Implement read functionality
+
+    if (DEBUG) printk(KERN_INFO "NFC_tag: Reading from the NFC_tag kernal device\n");
+
+    return 0;
+}
+
+static ssize_t NFC_tag_write(struct file *file, const char *buffer, size_t length, loff_t *offset) {
+    // TODO: Implement write functionality
+
+    if (DEBUG) printk(KERN_INFO "NFC_tag: Writing to the NFC_tag kernal device\n");
+
+    return 0;
+}
+
+static int write_to_NFC_tag(struct spi_device *spi, unsigned char block_addr, const unsigned char *data, size_t data_len) {
+    // TODO - Implement writing to the NFC tag
 }
 
 module_init(NFC_tag_init);
