@@ -36,43 +36,6 @@ static struct file_operations fops = {
     .open = NFC_tag_open
 };
 
-static struct spi_device *MFRC522_spi_device;
-
-static int mfrc522_spi_init(void)
-{
-    struct spi_master *master;
-    struct spi_board_info spi_device_info = { // https://linuxtv.org/downloads/v4l-dvb-internals/device-drivers/API-struct-spi-board-info.html
-        .modalias = "mfrc522",
-        .max_speed_hz = 1000000,  // Speed of SPI bus (1MHz)
-        .mode = SPI_MODE_0,
-        .bus_num = 1,            // ? SPI bus number (not 100% sure this is the correct number)
-        .chip_select = 0,        // SPI chip select - we have only one device connected
-        .platform_data = NULL,   // ? can leave as NULL for simple configurations - not sure if this qualifies
-    };
-
-    master = spi_busnum_to_master(spi_device_info.bus_num);
-    if (!master) {
-        printk(KERN_ALERT "SPI Master not found.\n");
-        return -ENODEV;
-    }
-
-    mfrc522_spi_device = spi_new_device(master, &spi_device_info);
-    if (!mfrc522_spi_device) {
-        printk(KERN_ALERT "Failed to create SPI device.\n");
-        spi_master_put(master);
-        return -ENODEV;
-    }
-
-    mfrc522_spi_device->bits_per_word = 8;
-    if (spi_setup(mfrc522_spi_device)) {
-        printk(KERN_ALERT "SPI setup failed.\n");
-        spi_unregister_device(mfrc522_spi_device);
-        return -ENODEV;
-    }
-
-    return 0;
-}
-
 static int mfrc522_spi_write_then_read(struct spi_device *spi, const void *txbuf, unsigned n_tx, void *rxbuf, unsigned n_rx)
 {
     /* 
