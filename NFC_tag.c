@@ -32,37 +32,6 @@ static struct file_operations fops = {
     .open = NFC_tag_open
 };
 
-<<<<<<< Updated upstream
-static struct spi_device *MFRC522_spi_device
-=======
-static int mfrc522_spi_write_then_read(struct spi_device *spi, const void *txbuf, unsigned n_tx, void *rxbuf, unsigned n_rx)
-{
-    /* 
-        ptr *struct spi_device spi: Pointer to the SPI device structure; represents the SPI slave device.
-        ptr *const void txbuf: Pointer to the buffer containing the data to be transmitted.
-        unsigned n_tx: Number of bytes to transmit.
-        ptr *void rxbuf: Pointer to the buffer where the received data will be stored.
-        unsigned n_rx: Number of bytes expected to be received.
-    */
-
-    struct spi_transfer t[2] = {0}; // Array of two transfer structures (one for transmit, one for receive)
-    struct spi_message m;           // SPI message object
-
-    spi_message_init(&m);           // Initialize the SPI message
-    memset(t, 0, sizeof(t));        // Clear the transfer structures
-
-    t[0].tx_buf = txbuf;            // Set the transmit buffer
-    t[0].len = n_tx;                // Set the length of the transmit buffer
-    spi_message_add_tail(&t[0], &m);// Add the first transfer to the message
-
-    t[1].rx_buf = rxbuf;            // Set the receive buffer
-    t[1].len = n_rx;                // Set the length of the receive buffer
-    spi_message_add_tail(&t[1], &m);// Add the second transfer to the message
-
-    return spi_sync(spi, &m);       // Execute the SPI transaction
-}
->>>>>>> Stashed changes
-
 static int __init NFC_tag_init(void) {
     int result;
     

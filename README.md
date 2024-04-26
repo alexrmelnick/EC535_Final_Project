@@ -6,16 +6,12 @@ a solenoid lock. The antenna should respond/recognize different tokens and inter
 when the 2 of the 3 NFC tokens are in close proximity.
 
 ## Materials:
-- Beagleboard (1)
-- Antenna Module (NXP MFRC52202HN1) (1)
-- NFC Tokens (S50) (3) 
-- Linear Solenoid (uxcell a14092600ux0438) (1)
+- Beagleboard (1x)
+- Antenna Module (NXP MFRC52202HN1) (1x)
+- NFC Tokens (S50) (3x) 
+- Linear Solenoid (uxcell a14092600ux0438) (1x) 
 
-<<<<<<< Updated upstream
-Modules neccessary:
-=======
 ## Modules necessary:
->>>>>>> Stashed changes
 - Main kernel module
 - Programming module for tags
 - Detector module for antenna to tag
