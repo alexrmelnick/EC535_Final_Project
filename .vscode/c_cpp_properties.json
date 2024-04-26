@@ -4,14 +4,13 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "\\\\wsl$\\Ubuntu\\usr\\src\\linux-headers-5.15.0-102\\include",
+                "\\\\wsl$\\Ubuntu\\usr\\src\\linux-headers-5.15.0-102\\include"
             ],
             "defines": [
                 "_DEBUG",
                 "UNICODE",
                 "_UNICODE"
             ],
-            "compilerPath": "C:\\msys64\\ucrt64\\bin\\gcc.exe",
             "cStandard": "c17",
             "cppStandard": "gnu++17",
             "intelliSenseMode": "windows-gcc-x64"
