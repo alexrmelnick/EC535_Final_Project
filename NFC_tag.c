@@ -1,4 +1,4 @@
-// This kernal module is used to encode the NFC tag data onto the NFC tag
+// * This kernal module is used to encode the NFC tag data onto the NFC tag
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -8,7 +8,6 @@
 #include <linux/uaccess.h>
 #include <linux/device.h>
 #include <linux/spi/spi.h>
-#include <linux/dekay.h>
 
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Alex Melnick and Alfonso Meraz");
@@ -24,6 +23,11 @@ static bool DEBUG = true;
 static ssize_t NFC_tag_read(struct file *file, char *buffer, size_t length, loff_t *offset);
 static ssize_t NFC_tag_write(struct file *file, const char *buffer, size_t length, loff_t *offset);
 static int NFC_tag_open(struct inode *inode, struct file *file);
+
+static int mfrc522_spi_init(void);
+static int mfrc522_spi_write_then_read(struct spi_device *spi, const void *txbuf, unsigned n_tx, void *rxbuf, unsigned n_rx);
+
+static int write_to_NFC_tag(struct spi_device *spi, unsigned char block_addr, const unsigned char *data, size_t data_len);
 
 static struct file_operations fops = {
     .owner = THIS_MODULE,
@@ -76,6 +80,17 @@ static int __init NFC_tag_init(void) {
     } else if (DEBUG) {
         printk(KERN_INFO "NFC_tag: set GPIO %d as input\n", GPIO_IRQ);
     }
+
+    // Initialize the SPI
+    result = mfrc522_spi_init();
+    if (result < 0) {
+        printk(KERN_WARNING "NFC_tag: unable to initialize SPI\n");
+        return result;
+    } else if (DEBUG) {
+        printk(KERN_INFO "NFC_tag: initialized SPI\n");
+    }
+
+    return 0;
 }
 
 static void __exit NFC_tag_exit(void) {
@@ -85,5 +100,28 @@ static void __exit NFC_tag_exit(void) {
     unregister_chrdev(major, "NFC_tag");
 
     // Free the GPIO
-    gpio_free(GPIO_ANTENNA_RST);
+    gpio_free(GPIO_RST);
 }
+
+static ssize_t NFC_tag_read(struct file *file, char *buffer, size_t length, loff_t *offset) {
+    // TODO: Implement read functionality
+
+    if (DEBUG) printk(KERN_INFO "NFC_tag: Reading from the NFC_tag kernal device\n");
+
+    return 0;
+}
+
+static ssize_t NFC_tag_write(struct file *file, const char *buffer, size_t length, loff_t *offset) {
+    // TODO: Implement write functionality
+
+    if (DEBUG) printk(KERN_INFO "NFC_tag: Writing to the NFC_tag kernal device\n");
+
+    return 0;
+}
+
+static int write_to_NFC_tag(struct spi_device *spi, unsigned char block_addr, const unsigned char *data, size_t data_len) {
+    // TODO - Implement writing to the NFC tag
+}
+
+module_init(NFC_tag_init);
+module_exit(NFC_tag_exit);
