@@ -11,11 +11,7 @@ when the 2 of the 3 NFC tokens are in close proximity.
 - NFC Tokens (S50) (3) 
 - Linear Solenoid (uxcell a14092600ux0438) (1)
 
-<<<<<<< Updated upstream
-Modules neccessary:
-=======
 ## Modules necessary:
->>>>>>> Stashed changes
 - Main kernel module
 - Programming module for tags
 - Detector module for antenna to tag
