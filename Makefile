@@ -1,17 +1,17 @@
-ifneq ($(KERNELRELEASE),)
-	obj-m := controller.o
-	controller-objs := controller.o nfc.o solenoid.o
+# pulled directly from my lab2 submission
 
+ifneq ($(KERNELRELEASE),)
+	obj-m := i2c_driver.o
 else
 	KERNELDIR := $(EC535)/bbb/stock/stock-linux-4.19.82-ti-rt-r33
 	PWD := $(shell pwd)
 	ARCH := arm
-	CROSS_COMPILE := arm-linux-gnueabihf-
+	CROSS := arm-linux-gnueabihf-
 
 default:
-	$(MAKE) -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules
+	$(MAKE) -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS) modules
 
 clean:
-	$(MAKE) -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) clean
+	$(MAKE) -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) clean
 
 endif
