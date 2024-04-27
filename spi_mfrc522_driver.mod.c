@@ -26,23 +26,26 @@ static const struct modversion_info ____versions[]
 __used
 __attribute__((section("__versions"))) = {
 	{ 0xa16cf51b, "module_layout" },
-	{ 0xb41a798f, "i2c_unregister_device" },
 	{ 0x6bc3fbc0, "__unregister_chrdev" },
-	{ 0x1f820e6e, "i2c_register_driver" },
-	{ 0xaf4cf2a0, "i2c_put_adapter" },
-	{ 0xb924bb9a, "i2c_new_device" },
-	{ 0x24133dc6, "i2c_get_adapter" },
 	{ 0xfe990052, "gpio_free" },
 	{ 0xf9a482f9, "msleep" },
 	{ 0xb8f3845c, "gpiod_set_raw_value" },
 	{ 0xd260b89d, "gpiod_direction_output_raw" },
 	{ 0x28eca8fe, "gpio_to_desc" },
 	{ 0x47229b5c, "gpio_request" },
+	{ 0xa8d0a4ae, "spi_unregister_device" },
+	{ 0x1bd0759a, "spi_setup" },
+	{ 0x18a5632f, "put_device" },
+	{ 0xe9f0eb0f, "spi_new_device" },
+	{ 0x6235306a, "spi_busnum_to_master" },
 	{ 0x1f6e82a4, "__register_chrdev" },
-	{ 0xc3f8b285, "i2c_smbus_read_byte_data" },
-	{ 0xb8f5d053, "i2c_smbus_write_byte_data" },
 	{ 0x2e5810c6, "__aeabi_unwind_cpp_pr1" },
+	{ 0xdb7305a1, "__stack_chk_fail" },
+	{ 0xc926532b, "spi_sync" },
+	{ 0x68f31cbd, "__list_add_valid" },
 	{ 0x7c32d0f0, "printk" },
+	{ 0x5f754e5a, "memset" },
+	{ 0x8f678b07, "__stack_chk_guard" },
 	{ 0xb1ad28e0, "__gnu_mcount_nc" },
 };
 
@@ -51,4 +54,3 @@ __used
 __attribute__((section(".modinfo"))) =
 "depends=";
 
-MODULE_ALIAS("i2c:mfrc522");

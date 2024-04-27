@@ -1,7 +1,7 @@
 # pulled directly from my lab2 submission
 
 ifneq ($(KERNELRELEASE),)
-	obj-m := i2c_driver.o
+	obj-m := spi_mfrc522_driver.o
 else
 	KERNELDIR := $(EC535)/bbb/stock/stock-linux-4.19.82-ti-rt-r33
 	PWD := $(shell pwd)

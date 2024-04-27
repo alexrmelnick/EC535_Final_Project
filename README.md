@@ -31,6 +31,8 @@ when the 2 of the 3 NFC tokens are in close proximity.
 | GND     | P9_45 (DGND)       |
 | RST     | P8_10 (GPIO_68)    |
 | 3.3V    | P9_03 (VDD 3.3 V)  |
+----------|--------------------|
+| Solenoid| P8_14 (GPIO_26)    |
 
 ## Further Reading
 - https://www.kernel.org/doc/html/v4.9/driver-api/spi.html

@@ -17,19 +17,18 @@ static int major = 61; //* FOR TESTING PURPOSES
 //* FOR TESTING PURPOSES
 static struct file_operations fops;
 
-
-
-
 #define GPIO_RST 68
 
 static int __init mfrc522_spi_init(void);
 static void __exit mfrc522_spi_exit(void);
 static int mfrc522_spi_write_then_read(struct spi_device *spi, const void *txbuf, unsigned n_tx, void *rxbuf, unsigned n_rx);
+static int mfrc522_send_command(struct spi_device *spi, uint8_t RcvOff, uint8_t PowerDown, uint8_t Command);
 
 static int mfrc522_reset(void);
 static int mfrc522_read_version(struct spi_device *spi);
 
 static struct spi_device *mfrc522_spi_device;
+
 struct spi_board_info spi_device_info = { 
     .modalias = "mfrc522-driver",   // Name of our SPI device driver
     .max_speed_hz = 1000000, // ? Speed of SPI bus (1MHz) - Hope this is right
@@ -91,11 +90,7 @@ static int __init mfrc522_spi_init(void)
 
     // Perform a self-test
     // TODO - Implement this function
-    // if (success && DEBUG) {
-    //     printk(KERN_INFO "MFRC522 self-test successful.\n");
-    // } else {
-    //     printk(KERN_ALERT "MFRC522 self-test failed.\n");
-    // } 
+   
 
     printk(KERN_INFO "MFRC522 SPI driver initialized.\n");
     return 0;
@@ -152,6 +147,35 @@ static int mfrc522_spi_write_then_read(struct spi_device *spi, const void *txbuf
 
     return 0;
 }
+
+// static int mfrc522_send_command(struct spi_device *spi, uint8_t RcvOff, uint8_t PowerDown, uint8_t Command)
+// {
+//     // Send a command to the MFRC522
+//     int result;
+//     char txbuf[2] = {0x01, 0x00}; // Buffer to store the command, 0x01 is the command register
+//     char rxbuf[1] = {0};           // Buffer to store the response
+
+//     // Prepare the command
+//     // Bit  7   6     5     4     3     2     1     0
+//     //      0   0 RcvOff PowerDown   Command[3:0] 
+//     txbuf[1] = n_tx << 5;       // set "analog part of the receiver is switched off"
+//     txbuf[1] |= PowerDown << 4; // set "Soft power-down mode entered"
+//                                 //* 0 = MFRC522 is ready
+//     txbuf[1] |= Command;        // set the command
+
+//     if (DEBUG) { printk(KERN_INFO "Sending command 0x%x to the MFRC522.\n", *(int *)txbuf[1]); }
+
+//     // Send the command
+//     result = mfrc522_spi_write_then_read(spi, txbuf, 2, rxbuf, 1);
+//     if (result) {
+//         printk(KERN_WARNING "Failed to send command 0x%x to the MFRC522.\n", command);
+//         return -ENODEV;
+//     } else if (DEBUG) {
+//         printk(KERN_INFO "Command 0x%x sent to the MFRC522.\n", command);
+//     }
+
+//     return 0;
+//}
 
 static int mfrc522_reset(void)
 {
@@ -215,6 +239,63 @@ static int mfrc522_read_version(struct spi_device *spi)
     }
 
     return (int)rxbuf[0]; // Return the version
+}
+
+static int mfrc522_self_test(struct spi_device *spi) {
+    /*
+        Procedure to perform a self-test on the MFRC522:
+        1. Perform a soft reset.
+        2. Clear the internal buffer by writing 25 bytes of 00h and implement the Config command.
+        3. Enable the self test by writing 09h to the AutoTestReg register.
+        4. Write 00h to the FIFO buffer.
+        5. Start the self test with the CalcCRC command.
+        6. The self test is initiated.
+        7. When the self test has completed, the FIFO buffer contains the following 64 bytes:
+            00h, EBh, 66h, BAh, 57h, BFh, 23h, 95h,
+            D0h, E3h, 0Dh, 3Dh, 27h, 89h, 5Ch, DEh,
+            9Dh, 3Bh, A7h, 00h, 21h, 5Bh, 89h, 82h, 
+            51h, 3Ah, EBh, 02h, 0Ch, A5h, 00h, 49h, 
+            7Ch, 84h, 4Dh, B3h, CCh, D2h, 1Bh, 81h,
+            5Dh, 48h, 76h, D5h, 71h, 061h, 21h, A9h,
+            86h, 96h, 83h, 38h, CFh, 9Dh, 5Bh, 6Dh, 
+            DCh, 15h, BAh, 3Eh, 7Dh, 95h, 03Bh, 2Fh
+    */
+
+    int result;
+    uint8_t txbuf[25] = {0};    // Buffer to clear the internal buffer
+    uint8_t rxbuf[64];          // Buffer to store the received data
+    uint8_t command;            // Command to send to the MFRC522
+    const uint8_t expected_result[64] = {
+        0x00, 0xEB, 0x66, 0xBA, 0x57, 0xBF, 0x23, 0x95,
+        0xD0, 0xE3, 0x0D, 0x3D, 0x27, 0x89, 0x5C, 0xDE,
+        0x9D, 0x3B, 0xA7, 0x00, 0x21, 0x5B, 0x89, 0x82,
+        0x51, 0x3A, 0xEB, 0x02, 0x0C, 0xA5, 0x00, 0x49,
+        0x7C, 0x84, 0x4D, 0xB3, 0xCC, 0xD2, 0x1B, 0x81,
+        0x5D, 0x48, 0x76, 0xD5, 0x71, 0x61, 0x21, 0xA9,
+        0x86, 0x96, 0x83, 0x38, 0xCF, 0x9D, 0x5B, 0x6D,
+        0xDC, 0x15, 0xBA, 0x3E, 0x7D, 0x95, 0x3B, 0x2F
+    };
+
+    const uint8_t SelfTestReg = 0x36; // Register to enable the self-test
+    const uint8_t CommandReg = 0x01;  // Command register
+    const uint8_t CalcCRC = 0x03;     // Command to start the self-test
+    const uint8_t FIFODataReg = 0x09;   
+    const uint8_t AutoTestReg = 0x09;
+    const uint8_t SelfTestCmd = 0x09;
+
+    
+
+    if (DEBUG) { printk(KERN_INFO "Performing a self-test on the MFRC522.\n"); }
+
+   // 1. Perform a soft reset
+    mfrc522_send_command(spi, 0, 0, 0b1111); // Soft reset
+
+    if (DEBUG) { printk(KERN_INFO "Soft reset complete.\n"); }
+
+    // 2. Clear the internal buffer by writing 25 bytes of 00h and implement the Config command
+    //? Dont know what the Config command is
+    result = mfrc522_spi_write_then_read(spi, txbuf, 25, rxbuf, 0);
+
 }
 
 module_init(mfrc522_spi_init);
