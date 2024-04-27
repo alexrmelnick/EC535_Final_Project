@@ -20,9 +20,9 @@ MODULE_DESCRIPTION("A simple Linux kernel module for interacting with the MFRC52
 
 static const bool DEBUG = true;
 
-#define I2C_BUS_AVAILABLE   (          0 )              // I2C Bus
+#define I2C_BUS_AVAILABLE   (          2 )              // I2C Bus
 #define SLAVE_DEVICE_NAME   ( "mfrc522"  )              // Device and Driver Name
-#define MFRC522_SLAVE_ADDR  (       0x28 )              // MFRC522 NFC Tag Reader/Writer Slave Address
+#define MFRC522_SLAVE_ADDR  (       0x50 )              // MFRC522 NFC Tag Reader/Writer Slave Address
 
 #define GPIO_RST 68
 

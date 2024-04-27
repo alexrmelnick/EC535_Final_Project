@@ -1,142 +1,160 @@
+/**
+ * This module is used to operate the solenoid lock
+*/
+
 #include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/gpio.h>          // Required for GPIO functions
+#include <linux/timer.h>
 #include <linux/init.h>
+#include <linux/gpio.h> // For GPIO functions
+#include <linux/interrupt.h>
+#include <linux/kthread.h>
 #include <linux/fs.h>
-#include <linux/uaccess.h>       // Required for copy_to_user function
-#include "solenoid.h"
+#include <linux/device.h>
+#include <linux/cdev.h>
+#include <linux/types.h>
+#include <linux/uaccess.h>
 
-#define SOLENOID_GPIO_PIN 50    // Define the GPIO pin number for the solenoid
+MODULE_LICENSE("Dual BSD/GPL");
+MODULE_AUTHOR("Alfonso Meraz & Alex Melnick");
+MODULE_DESCRIPTION("Linux driver for traffic light.");
 
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Alfonso Meraz and Alex Melnick");
-MODULE_DESCRIPTION("Kernel module for controlling a solenoid lock");
+static int major = 61;  //? May change later
 
-// Function prototypes
-static int solenoid_open(struct inode *inode, struct file *file);
-static int solenoid_release(struct inode *inode, struct file *file);
-static ssize_t solenoid_write(struct file *file, const char __user *buf, size_t len, loff_t *ppos);
+#define GPIO_LOCK 26
+#define DEVICE_NAME "solenoid"
 
-// File operations structure
-static struct file_operations solenoid_fops = {
+const static bool DEBUG = true;
+
+static const struct file_operations fops = {
     .owner = THIS_MODULE,
     .open = solenoid_open,
     .release = solenoid_release,
-    .write = solenoid_write,
+    .read = solenoid_read,
+    .write = solenoid_write
 };
 
-static int major = 61;              // Major number for device file
-static struct class *solenoid_class;
+static ssize_t solenoid_read(struct file *file, char *buffer, size_t length, loff_t *offset);
+static ssize_t solenoid_write(struct file *file, const char *buffer, size_t length, loff_t *offset);
+static int solenoid_open(struct inode *inode, struct file *file);
+static int solenoid_release(struct inode *inode, struct file *file);
+static int __init solenoid_init(void);
+static int __exit solenoid_exit(void);
 
-// Initialize the solenoid module
+static bool locked = false; 
+
 static int __init solenoid_init(void) {
     int result;
 
-    // Registering device
-    major = register_chrdev(major, "solenoid", &solenoid_fops);
-    if (major < 0) {
-        printk(KERN_ALERT "Solenoid module registration failed: %d\n", major);
-        return major;
-    }
+    printk(KERN_INFO "Initializing the Solenoid module\n");
 
-    // Creating class
-    solenoid_class = class_create(THIS_MODULE, "solenoid_class");
-    if (IS_ERR(solenoid_class)) {
-        unregister_chrdev(major, "solenoid");
-        printk(KERN_ALERT "Failed to create class.\n");
-        return PTR_ERR(solenoid_class);
-    }
-
-    // Creating device
-    device_create(solenoid_class, NULL, MKDEV(major, 0), NULL, "solenoid%d", 0);
-
-    // Request GPIO
-    result = gpio_request(SOLENOID_GPIO_PIN, "solenoid_gpio");
-    if (result) {
-        printk(KERN_ERR "Unable to request GPIOs: %d\n", result);
+    // Register the device
+    result = register_chrdev(major, "solenoid", &fops);
+    if (result < 0) {
+        printk(KERN_WARNING "Cannot get major number %d\n", major);
         return result;
+    } else if (DEBUG) {
+        printk(KERN_INFO "Registered correctly with major number %d\n", major);
     }
 
-    // Set GPIO as output and initialize it to high (lock)
-    gpio_direction_output(SOLENOID_GPIO_PIN, 1);
+    // Requesting the GPIO
+    result = gpio_request(SOLENOID_GPIO, "solenoid_gpio");
+    if (result) {
+        printk(KERN_ALERT "Cannot request GPIO %d: %d\n", SOLENOID_GPIO, result);
+        return result;
+    } else if (DEBUG) {
+        printk(KERN_INFO "Requested GPIO %d\n", SOLENOID_GPIO);
+    }
 
-    printk(KERN_INFO "Solenoid module has been loaded successfully\n");
+    // Setting the GPIO as output
+    result = gpio_direction_output(SOLENOID_GPIO, 0);
+    if (result) {
+        printk(KERN_ALERT "Cannot set GPIO %d as output: %d\n", SOLENOID_GPIO, result);
+        return result;
+    } else if (DEBUG) {
+        printk(KERN_INFO "Set GPIO %d as output\n", SOLENOID_GPIO);
+    }
+
+    // Set the GPIO to 0
+    result = gpio_set_value(SOLENOID_GPIO, 0);
+    if (result) {
+        printk(KERN_ALERT "Cannot set GPIO %d to 0: %d\n", SOLENOID_GPIO, result);
+        return result;
+    } else if (DEBUG) {
+        printk(KERN_INFO "Set GPIO %d to 0\n", SOLENOID_GPIO);
+    }
+
     return 0;
+
+
 }
 
-// Clean up the solenoid module
+static ssize_t solenoid_write(struct file *filep, const char *buffer, size_t len, loff_t *offset){
+   char message[256] = {0};
+   if (len > 255) len = 255;
+   if (copy_from_user(message, buffer, len)) {
+       return -EFAULT;
+   }
+
+   if (strncmp(message, "on", 2) == 0) {
+        if (locked) {
+            printk(KERN_INFO "%s: Solenoid is already locked\n", DEVICE_NAME);
+            return len;
+        } else {
+            gpio_set_value(SOLENOID_GPIO, 1);
+            locked = true;
+            printk(KERN_INFO "%s: Solenoid turned ON\n", DEVICE_NAME);
+        }
+   } else if (strncmp(message, "off", 3) == 0) {
+        if (!locked) {
+            printk(KERN_INFO "%s: Solenoid is already unlocked\n", DEVICE_NAME);
+            return len;
+        } else {
+            gpio_set_value(SOLENOID_GPIO, 0);
+            locked = false;
+            printk(KERN_INFO "%s: Solenoid turned OFF\n", DEVICE_NAME);
+        }
+   }
+
+   return len;
+}
+
+static ssize_t solenoid_read(struct file *filep, char *buffer, size_t len, loff_t *offset){
+   char message[256] = {0};
+   int message_len = 0;
+
+   if (locked) {
+       message_len = sprintf(message, "locked\n");
+   } else {
+       message_len = sprintf(message, "unlocked\n");
+   }
+
+   if (copy_to_user(buffer, message, message_len)) {
+       return -EFAULT;
+   }
+
+   return message_len;
+}
+
 static void __exit solenoid_exit(void) {
-    gpio_set_value(SOLENOID_GPIO_PIN, 1);  // Ensure solenoid is locked
-    gpio_free(SOLENOID_GPIO_PIN);          // Free the GPIO pin
+    printk(KERN_INFO "Exiting the Solenoid module\n");
 
-    device_destroy(solenoid_class, MKDEV(major, 0));
-    class_unregister(solenoid_class);
-    class_destroy(solenoid_class);
-    unregister_chrdev(major, "solenoid");
+    // Unregister the device
+    unregister_chrdev(major, DEVICE_NAME);
 
-    printk(KERN_INFO "Solenoid module has been unloaded\n");
+    // Free the GPIO
+    gpio_free(SOLENOID_GPIO);
 }
 
-// Open function for solenoid device file
-static int solenoid_open(struct inode *inode, struct file *file) {
-    return 0;
+static int solenoid_open(struct inode *inodep, struct file *filep){
+   printk(KERN_INFO "%s: Device has been opened\n", DEVICE_NAME);
+   return 0;
 }
 
-// Release function for solenoid device file
-static int solenoid_release(struct inode *inode, struct file *file) {
-    return 0;
-}
-
-// Write function for solenoid device file
-static ssize_t solenoid_write(struct file *file, const char __user *buf, size_t len, loff_t *ppos) {
-    char cmd;
-
-    if (copy_from_user(&cmd, buf, 1)) {
-        return -EFAULT;
-    }
-
-    switch (cmd) {
-        case '0': // Lock the solenoid
-            gpio_set_value(SOLENOID_GPIO_PIN, 1);
-            break;
-        case '1': // Unlock the solenoid
-            gpio_set_value(SOLENOID_GPIO_PIN, 0);
-            break;
-        default:
-            printk(KERN_INFO "Solenoid command not recognized\n");
-            return -EINVAL;  // Invalid argument error
-    }
-
-    return len;
-}
-
-int initialize_solenoid(int gpio_pin) {
-    int result;
-    result = gpio_request(gpio_pin, "solenoid_gpio");
-    if (result) {
-        printk(KERN_ERR "Unable to request GPIO %d for solenoid: %d\n", gpio_pin, result);
-        return result;
-    }
-
-    gpio_direction_output(gpio_pin, 1);  // Set the GPIO as a high output, locking the solenoid
-    return 0;
-}
-
-void cleanup_solenoid(int gpio_pin) {
-    gpio_set_value(gpio_pin, 1);  // Ensure solenoid is locked
-    gpio_free(gpio_pin);          // Release the GPIO
-}
-
-void activate_solenoid(int gpio_pin) {
-    gpio_set_value(gpio_pin, 0);  // Set GPIO low to unlock
-    printk(KERN_INFO "Solenoid Unlocked\n");
-}
-
-void deactivate_solenoid(int gpio_pin) {
-    gpio_set_value(gpio_pin, 1);  // Set GPIO high to lock
-    printk(KERN_INFO "Solenoid Locked\n");
+static int solenoid_release(struct inode *inodep, struct file *filep){
+   printk(KERN_INFO "%s: Device successfully closed\n", DEVICE_NAME);
+   return 0;
 }
 
 module_init(solenoid_init);
 module_exit(solenoid_exit);
-
