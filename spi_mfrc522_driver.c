@@ -1,21 +1,30 @@
 // SPI MFRC522 Slave Driver
-
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/spi/spi.h>
+#include <linux/gpio.h>
+#include <linux/delay.h>
+#include <linux/fs.h>
 
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Alex Melnick and Alfonso Meraz");
 MODULE_DESCRIPTION("Linux driver for MFRC522");
 
-const bool DEBUG = true;
+const static bool DEBUG = true;
+static int major = 61; //* FOR TESTING PURPOSES
+
+//* FOR TESTING PURPOSES
+static struct file_operations fops;
+
+
+
 
 #define GPIO_RST 68
 
 static int __init mfrc522_spi_init(void);
 static void __exit mfrc522_spi_exit(void);
-int mfrc522_spi_write_then_read(struct spi_device *spi, const void *txbuf, unsigned n_tx, void *rxbuf, unsigned n_rx);
+static int mfrc522_spi_write_then_read(struct spi_device *spi, const void *txbuf, unsigned n_tx, void *rxbuf, unsigned n_rx);
 
 static int mfrc522_reset(void);
 static int mfrc522_read_version(struct spi_device *spi);
@@ -33,8 +42,12 @@ static int __init mfrc522_spi_init(void)
 {
     // Get the SPI master driver
     struct spi_master *master;
-    int result;
+    int result, version;
     
+    //* FOR TESTING PURPOSES
+    register_chrdev(major, "spi_mfrc522_driver", &fops); // Register the device
+
+
     master = spi_busnum_to_master(spi_device_info.bus_num);
 
 
@@ -71,18 +84,18 @@ static int __init mfrc522_spi_init(void)
 
     // Initialize the MFRC522
     mfrc522_reset(); // Reset the MFRC522
-    int version = mfrc522_read_version(mfrc522_spi_device); // Read the version of the MFRC522
+    version = mfrc522_read_version(mfrc522_spi_device); // Read the version of the MFRC522
     if (DEBUG) { printk(KERN_INFO "MFRC522 version: %x (expecting 0x92)\n", version); }
     // TODO - Configure the MFRC522
     // TODO - Enable the antenna
 
     // Perform a self-test
     // TODO - Implement this function
-    if (success && DEBUG) {
-        printk(KERN_INFO "MFRC522 self-test successful.\n");
-    } else {
-        printk(KERN_ALERT "MFRC522 self-test failed.\n");
-    } 
+    // if (success && DEBUG) {
+    //     printk(KERN_INFO "MFRC522 self-test successful.\n");
+    // } else {
+    //     printk(KERN_ALERT "MFRC522 self-test failed.\n");
+    // } 
 
     printk(KERN_INFO "MFRC522 SPI driver initialized.\n");
     return 0;
@@ -90,6 +103,10 @@ static int __init mfrc522_spi_init(void)
 
 static void __exit mfrc522_spi_exit(void)
 {
+    //* FOR TESTING PURPOSES
+    unregister_chrdev(major, "spi_mfrc522_driver"); // Unregister the device
+
+   
     // Deinitialize the MFRC522
     // TODO - Implement this function
     if (DEBUG) { printk(KERN_INFO "MFRC522 deinitialized.\n");}
@@ -112,7 +129,7 @@ static int mfrc522_spi_write_then_read(struct spi_device *spi, const void *txbuf
     struct spi_message m;           // SPI message object
     int result;
 
-    if (DEBUG) { printk(KERN_INFO "SPI writing %s then reading.\n", txbuf); }
+    if (DEBUG) { printk(KERN_INFO "SPI writing 0x%x then reading.\n", *(int *)txbuf); }
 
     spi_message_init(&m);           // Initialize the SPI message
     memset(t, 0, sizeof(t));        // Clear the transfer structures
@@ -127,7 +144,7 @@ static int mfrc522_spi_write_then_read(struct spi_device *spi, const void *txbuf
 
     result = spi_sync(spi, &m);      // Execute the SPI transaction
     if (result) {
-        printk(KERN_ALERT "SPI transaction failed.\n");
+        printk(KERN_WARNING "SPI transaction failed.\n");
         return -ENODEV;
     } else if (DEBUG) {
         printk(KERN_INFO "SPI transaction successful.\n");
@@ -166,10 +183,12 @@ static int mfrc522_reset(void)
     msleep(100); // Wait for 100 ms - cannot find on the datasheet so leaving low for a long period
 
     // Release the reset
-    pio_set_value(GPIO_RST, 1);
+    gpio_set_value(GPIO_RST, 1);
 
     // Free the GPIO
-    gpio_free(GPIO_ANTENNA_RST);
+    gpio_free(GPIO_RST);
+
+    return 0;
 }
 
 static int mfrc522_read_version(struct spi_device *spi)
@@ -184,14 +203,14 @@ static int mfrc522_read_version(struct spi_device *spi)
     // Send the command to read the version
     result = mfrc522_spi_write_then_read(spi, txbuf, 1, rxbuf, 1);
     if (result) {
-        printk(KERN_ALERT "Failed to read the version of the MFRC522.\n");
+        printk(KERN_WARNING "Failed to read the version of the MFRC522.\n");
         return -ENODEV;
     } else if (DEBUG) {
         printk(KERN_INFO "Version of the MFRC522: %d\n", rxbuf[0]);
     }
 
     if (rxbuf[0] != 0x92) {
-        printk(KERN_ALERT "Incorrect version of the MFRC522.\n");
+        printk(KERN_WARNING "Incorrect version of the MFRC522.\n");
         return -ENODEV;
     }
 

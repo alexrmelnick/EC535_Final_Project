@@ -38,3 +38,7 @@ when the 2 of the 3 NFC tokens are in close proximity.
 - https://youtu.be/Yh3TLXihUps?si=wRjqsa_WysqMT6_W - Solenoid wiring tutorial
 - https://embetronicx.com/tutorials/linux/device-drivers/linux-kernel-spi-device-driver-tutorial/ 
 - https://embetronicx.com/tutorials/tech_devices/spi-serial-peripheral-interface-protocol-basics/
+
+- https://embetronicx.com/tutorials/tech_devices/i2c_1/ 
+- https://embetronicx.com/tutorials/tech_devices/i2c_2/
+- https://embetronicx.com/tutorials/linux/device-drivers/i2c-linux-device-driver-using-raspberry-pi/ 
