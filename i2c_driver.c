@@ -58,7 +58,7 @@ static struct i2c_driver mfrc522_driver = {
     //* I think we need to add more to this struct with other methods for the board itself
     .probe = mfrc522_probe,
     .remove = mfrc522_remove,
-    .id_table = mfrc522_id,
+    .id_table = mfrc522_id
 };
 
 static struct i2c_board_info mfrc522_info = {

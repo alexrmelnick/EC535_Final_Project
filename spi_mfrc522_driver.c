@@ -18,23 +18,30 @@ static int major = 61; //* FOR TESTING PURPOSES
 static struct file_operations fops;
 
 #define GPIO_RST 68
+#define SPEED 9600 // Speed of SPI bus (default 9.6 kBd)
 
 static int __init mfrc522_spi_init(void);
 static void __exit mfrc522_spi_exit(void);
-static int mfrc522_spi_write_then_read(struct spi_device *spi, const void *txbuf, unsigned n_tx, void *rxbuf, unsigned n_rx);
-static int mfrc522_send_command(struct spi_device *spi, uint8_t RcvOff, uint8_t PowerDown, uint8_t Command);
 
-static int mfrc522_reset(void);
+static int mfrc522_spi_write_then_read(struct spi_device *spi, const void *txbuf, unsigned n_tx, void *rxbuf, unsigned n_rx);
+static int mfrc522_spi_write_byte(struct spi_device *spi, uint8_t address, uint8_t data);
+static int mfrc522_spi_write_data(struct spi_device *spi, uint8_t address, uint8_t *data, uint8_t length);
+static int mfrc522_spi_read_byte(struct spi_device *spi, uint8_t address, uint8_t *data);
+static int mfrc522_spi_read_data(struct spi_device *spi, uint8_t address, uint8_t *data, uint8_t length);
+//static int mfrc522_send_command(struct spi_device *spi, uint8_t RcvOff, uint8_t PowerDown, uint8_t Command);
+static int mfrc522_self_test(struct spi_device *spi);
+
+static int mfrc522_hard_reset(void);
 static int mfrc522_read_version(struct spi_device *spi);
 
 static struct spi_device *mfrc522_spi_device;
 
 struct spi_board_info spi_device_info = { 
     .modalias = "mfrc522-driver",   // Name of our SPI device driver
-    .max_speed_hz = 1000000, // ? Speed of SPI bus (1MHz) - Hope this is right
-    .mode = SPI_MODE_0,      // ? SPI mode (not 100% sure this is the correct mode)
-    .bus_num = 1,            // ? SPI bus number (not 100% sure this is the correct number)
-    .chip_select = 0,        // SPI chip select - we have only one device connected
+    .max_speed_hz = SPEED,           // Speed of SPI bus (9.6 kBd) - Hope this is right
+    .mode = SPI_MODE_0,             // ? SPI mode (not 100% sure this is the correct mode)
+    .bus_num = 1,                   // ? SPI bus number (not 100% sure this is the correct number)
+    .chip_select = 0,               // SPI chip select - we have only one device connected
 };
 
 static int __init mfrc522_spi_init(void)
@@ -82,15 +89,14 @@ static int __init mfrc522_spi_init(void)
     }
 
     // Initialize the MFRC522
-    mfrc522_reset(); // Reset the MFRC522
-    version = mfrc522_read_version(mfrc522_spi_device); // Read the version of the MFRC522
-    if (DEBUG) { printk(KERN_INFO "MFRC522 version: %x (expecting 0x92)\n", version); }
-    // TODO - Configure the MFRC522
-    // TODO - Enable the antenna
+    mfrc522_hard_reset(); // Reset the MFRC522
+    // version = mfrc522_read_version(mfrc522_spi_device); // Read the version of the MFRC522
+    // if (DEBUG) { printk(KERN_INFO "MFRC522 version: %x (expecting 0x92)\n", version); }
+    // // TODO - Configure the MFRC522
+    // // TODO - Enable the antenna
 
     // Perform a self-test
-    // TODO - Implement this function
-   
+    mfrc522_self_test(mfrc522_spi_device);
 
     printk(KERN_INFO "MFRC522 SPI driver initialized.\n");
     return 0;
@@ -140,7 +146,7 @@ static int mfrc522_spi_write_then_read(struct spi_device *spi, const void *txbuf
     result = spi_sync(spi, &m);      // Execute the SPI transaction
     if (result) {
         printk(KERN_WARNING "SPI transaction failed.\n");
-        return -ENODEV;
+        return result;
     } else if (DEBUG) {
         printk(KERN_INFO "SPI transaction successful.\n");
     }
@@ -148,36 +154,126 @@ static int mfrc522_spi_write_then_read(struct spi_device *spi, const void *txbuf
     return 0;
 }
 
-// static int mfrc522_send_command(struct spi_device *spi, uint8_t RcvOff, uint8_t PowerDown, uint8_t Command)
-// {
-//     // Send a command to the MFRC522
-//     int result;
-//     char txbuf[2] = {0x01, 0x00}; // Buffer to store the command, 0x01 is the command register
-//     char rxbuf[1] = {0};           // Buffer to store the response
+static int mfrc522_spi_write_byte(struct spi_device *spi, uint8_t address, uint8_t data)
+{
+    // Write a byte to the MFRC522
+    int result;
+    char txbuf[2] = {address << 1, data}; // Buffer to store the address and data
+    char rxbuf[1] = {0};              // Buffer to store the response
 
-//     // Prepare the command
-//     // Bit  7   6     5     4     3     2     1     0
-//     //      0   0 RcvOff PowerDown   Command[3:0] 
-//     txbuf[1] = n_tx << 5;       // set "analog part of the receiver is switched off"
-//     txbuf[1] |= PowerDown << 4; // set "Soft power-down mode entered"
-//                                 //* 0 = MFRC522 is ready
-//     txbuf[1] |= Command;        // set the command
+    if (DEBUG) { printk(KERN_INFO "Writing 0x%x to address 0x%x.\n", data, address); }
 
-//     if (DEBUG) { printk(KERN_INFO "Sending command 0x%x to the MFRC522.\n", *(int *)txbuf[1]); }
+    // Write the byte
+    result = mfrc522_spi_write_then_read(spi, txbuf, 2, rxbuf, 1);
+    if (result) {
+        printk(KERN_WARNING "Failed to write 0x%x to address 0x%x.\n", data, address);
+        return -ENODEV;
+    } else if (DEBUG) {
+        printk(KERN_INFO "Wrote 0x%x to address 0x%x.\n", data, address);
+    }
 
-//     // Send the command
-//     result = mfrc522_spi_write_then_read(spi, txbuf, 2, rxbuf, 1);
-//     if (result) {
-//         printk(KERN_WARNING "Failed to send command 0x%x to the MFRC522.\n", command);
-//         return -ENODEV;
-//     } else if (DEBUG) {
-//         printk(KERN_INFO "Command 0x%x sent to the MFRC522.\n", command);
-//     }
+    return 0;
+}
 
-//     return 0;
-//}
+static int mfrc522_spi_write_data(struct spi_device *spi, uint8_t address, uint8_t *data, uint8_t length) {
+    // Write data to the MFRC522
+    int result;
+    char *txbuf = kmalloc(length + 1, GFP_KERNEL); // Buffer to store the address and data
+    char rxbuf[1] = {0};                           // Buffer to store the response
 
-static int mfrc522_reset(void)
+    if (DEBUG) { printk(KERN_INFO "Writing data to address 0x%x.\n", address); }
+
+    // Prepare the buffer
+    txbuf[0] = address << 1; // Set the address
+    memcpy(txbuf + 1, data, length); // Copy the data to the buffer
+
+    // Write the data
+    result = mfrc522_spi_write_then_read(spi, txbuf, length + 1, rxbuf, 1);
+    if (result) {
+        printk(KERN_WARNING "Failed to write data to address 0x%x.\n", address);
+        return -ENODEV;
+    } else if (DEBUG) {
+        printk(KERN_INFO "Wrote data to address 0x%x.\n", address);
+    }
+
+    kfree(txbuf); // Free the buffer
+
+    return 0;
+
+}
+
+static int mfrc522_spi_read_byte(struct spi_device *spi, uint8_t address, uint8_t *data)
+{
+    // Read a byte from the MFRC522
+    int result;
+    char txbuf[1] = {address << 1}; // Buffer to store the address
+    char rxbuf[1] = {0};       // Buffer to store the response
+
+    if (DEBUG) { printk(KERN_INFO "Reading from address 0x%x.\n", address); }
+
+    // Read the byte
+    result = mfrc522_spi_write_then_read(spi, txbuf, 1, rxbuf, 1);
+    if (result) {
+        printk(KERN_WARNING "Failed to read from address 0x%x.\n", address);
+        return -ENODEV;
+    } else if (DEBUG) {
+        printk(KERN_INFO "Read 0x%x from address 0x%x.\n", rxbuf[0], address);
+    }
+
+    *data = rxbuf[0]; // Store the data in the pointer
+
+    return 0;
+}
+
+static int mfrc522_spi_read_data(struct spi_device *spi, uint8_t address, uint8_t *data, uint8_t length) {
+    // Read data from the MFRC522
+    int result;
+    char txbuf[1] = {address << 1}; // Buffer to store the address
+    char *rxbuf = kmalloc(length, GFP_KERNEL); // Buffer to store the response
+
+    if (DEBUG) { printk(KERN_INFO "Reading data from address 0x%x.\n", address); }
+
+    // Read the data
+    result = mfrc522_spi_write_then_read(spi, txbuf, 1, rxbuf, length);
+    if (result) {
+        printk(KERN_WARNING "Failed to read data from address 0x%x.\n", address);
+        return -ENODEV;
+    } else if (DEBUG) {
+        printk(KERN_INFO "Read data from address 0x%x.\n", address);
+    }
+
+    memcpy(data, rxbuf, length); // Copy the data to the pointer
+
+    kfree(rxbuf); // Free the buffer
+
+    return 0;
+
+}
+
+/**
+ * @brief Send a command to the MFRC522 command register 
+ * @param spi Pointer to the SPI device structure
+ * @param RcvOff Analogue part of the receiver is switched off
+ * @param PowerDown High: Soft power-down mode entered; Low: Wake up procedure begins
+ * @param Command Command to send
+*/
+static int mfrc522_send_command(struct spi_device *spi, uint8_t RcvOff, uint8_t PowerDown, uint8_t Command)
+{
+    // From MFRC522 datasheet 9.3.1.2 CommandReg register (page 38)
+    // Prepare the command
+    // Bit  7   6     5     4     3     2     1     0
+    //      0   0 RcvOff PowerDown   Command[3:0] 
+
+    uint8_t commandReg = 0x01; // Command register
+    uint8_t data = (RcvOff << 6) | (PowerDown << 5) | Command; // Command byte
+
+    if (DEBUG) { printk(KERN_INFO "Sending command 0x%x.\n", data); }
+
+    // Send the command
+    return mfrc522_spi_write_byte(spi, commandReg, data);
+}
+
+static int mfrc522_hard_reset(void)
 {
     // Reset the MFRC522
     int result;
@@ -204,7 +300,7 @@ static int mfrc522_reset(void)
     gpio_set_value(GPIO_RST, 0); // Set the GPIO low
 
     // Wait for a short period
-    msleep(100); // Wait for 100 ms - cannot find on the datasheet so leaving low for a long period
+    msleep(200); // Wait for 200 ms - cannot find on the datasheet so leaving low for a long period
 
     // Release the reset
     gpio_set_value(GPIO_RST, 1);
@@ -261,11 +357,12 @@ static int mfrc522_self_test(struct spi_device *spi) {
             DCh, 15h, BAh, 3Eh, 7Dh, 95h, 03Bh, 2Fh
     */
 
-    int result;
-    uint8_t txbuf[25] = {0};    // Buffer to clear the internal buffer
-    uint8_t rxbuf[64];          // Buffer to store the received data
-    uint8_t command;            // Command to send to the MFRC522
-    const uint8_t expected_result[64] = {
+    // int result, 
+    int i;
+    uint8_t *temp;               // Temporary byte to read from the FIFO buffer
+    uint8_t zeros[25] = {0}; // 25 bytes of 00h
+    uint8_t result[64] = {0}; // Buffer to store the result initialized to 0 
+    uint8_t expected_result[64] = {
         0x00, 0xEB, 0x66, 0xBA, 0x57, 0xBF, 0x23, 0x95,
         0xD0, 0xE3, 0x0D, 0x3D, 0x27, 0x89, 0x5C, 0xDE,
         0x9D, 0x3B, 0xA7, 0x00, 0x21, 0x5B, 0x89, 0x82,
@@ -276,12 +373,9 @@ static int mfrc522_self_test(struct spi_device *spi) {
         0xDC, 0x15, 0xBA, 0x3E, 0x7D, 0x95, 0x3B, 0x2F
     };
 
-    const uint8_t SelfTestReg = 0x36; // Register to enable the self-test
-    const uint8_t CommandReg = 0x01;  // Command register
-    const uint8_t CalcCRC = 0x03;     // Command to start the self-test
-    const uint8_t FIFODataReg = 0x09;   
-    const uint8_t AutoTestReg = 0x09;
-    const uint8_t SelfTestCmd = 0x09;
+    uint8_t FIFOLevelReg = 0x0A; // FIFO level register
+    uint8_t FIFODataReg  = 0x09;  // FIFO data register
+    uint8_t AutoTestReg  = 0x36;  // Auto test register
 
     
 
@@ -289,13 +383,45 @@ static int mfrc522_self_test(struct spi_device *spi) {
 
    // 1. Perform a soft reset
     mfrc522_send_command(spi, 0, 0, 0b1111); // Soft reset
+    msleep(150);                             // Wait for 150 ms
 
     if (DEBUG) { printk(KERN_INFO "Soft reset complete.\n"); }
 
     // 2. Clear the internal buffer by writing 25 bytes of 00h and implement the Config command
-    //? Dont know what the Config command is
-    result = mfrc522_spi_write_then_read(spi, txbuf, 25, rxbuf, 0);
+    mfrc522_spi_write_byte(spi, FIFOLevelReg, 0x80); // Flush the FIFO buffer
+    mfrc522_spi_write_data(spi, FIFODataReg, zeros, 25); // Clear the internal buffer
+    mfrc522_send_command(spi, 0, 0, 0b0001); // Mem command
 
+    // 3. Enable the self test by writing 09h to the AutoTestReg register
+    mfrc522_spi_write_byte(spi, AutoTestReg, 0x09); // Enable the self test
+
+    // 4. Write 00h to the FIFO buffer
+    mfrc522_spi_write_byte(spi, FIFODataReg, 0x00); // Write 00h to the FIFO buffer
+
+    // 5. Start the self test with the CalcCRC command
+    mfrc522_send_command(spi, 0, 0, 0b0100); // CalcCRC command
+
+    // 6. The self test is initiated
+    for (i = 0; i < 64; i++) { // CRC is done after 64 bytes
+        mfrc522_spi_read_byte(spi, FIFOLevelReg, temp); // Read the data from the FIFO buffer
+    }
+    mfrc522_send_command(spi, 0, 0, 0b0000); // Idle command to stop the CRC
+
+    // 7. Read the data from the FIFO buffer
+    mfrc522_spi_read_data(spi, FIFODataReg, result, 64); // Read the data from the FIFO buffer
+    mfrc522_spi_write_byte(spi, AutoTestReg, 0x00); // Disable the self test
+
+    // Compare the result with the expected result
+    for (i = 0; i < 64; i++) {
+        printk(KERN_INFO "Result: 0x%02x, Expected: 0x%02x\n", result[i], expected_result[i]);
+        if (result[i] != expected_result[i]) {
+            printk(KERN_WARNING "Self-test failed.\n");
+            return -ENODEV;
+        }
+    }
+
+    printk(KERN_INFO "Self-test successful.\n");
+    return 0;
 }
 
 module_init(mfrc522_spi_init);
