@@ -1,0 +1,1 @@
+cmd_/ad/eng/users/m/e/melnick/EC535/EC535_Final_Project/solenoid.ko := arm-linux-gnueabihf-ld -r  -EL -T ./scripts/module-common.lds -T ./arch/arm/kernel/module.lds  --build-id  -o /ad/eng/users/m/e/melnick/EC535/EC535_Final_Project/solenoid.ko /ad/eng/users/m/e/melnick/EC535/EC535_Final_Project/solenoid.o /ad/eng/users/m/e/melnick/EC535/EC535_Final_Project/solenoid.mod.o ;  true

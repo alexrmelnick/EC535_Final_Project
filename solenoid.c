@@ -21,10 +21,18 @@ MODULE_DESCRIPTION("Linux driver for traffic light.");
 
 static int major = 61;  //? May change later
 
-#define GPIO_LOCK 26
+#define SOLENOID_GPIO 26
 #define DEVICE_NAME "solenoid"
 
 const static bool DEBUG = true;
+
+static ssize_t solenoid_read(struct file *file, char *buffer, size_t length, loff_t *offset);
+static ssize_t solenoid_write(struct file *file, const char *buffer, size_t length, loff_t *offset);
+static int solenoid_open(struct inode *inode, struct file *file);
+static int solenoid_release(struct inode *inode, struct file *file);
+
+static int __init solenoid_init(void);
+static void __exit solenoid_exit(void);
 
 static const struct file_operations fops = {
     .owner = THIS_MODULE,
@@ -33,13 +41,6 @@ static const struct file_operations fops = {
     .read = solenoid_read,
     .write = solenoid_write
 };
-
-static ssize_t solenoid_read(struct file *file, char *buffer, size_t length, loff_t *offset);
-static ssize_t solenoid_write(struct file *file, const char *buffer, size_t length, loff_t *offset);
-static int solenoid_open(struct inode *inode, struct file *file);
-static int solenoid_release(struct inode *inode, struct file *file);
-static int __init solenoid_init(void);
-static int __exit solenoid_exit(void);
 
 static bool locked = false; 
 
@@ -76,13 +77,7 @@ static int __init solenoid_init(void) {
     }
 
     // Set the GPIO to 0
-    result = gpio_set_value(SOLENOID_GPIO, 0);
-    if (result) {
-        printk(KERN_ALERT "Cannot set GPIO %d to 0: %d\n", SOLENOID_GPIO, result);
-        return result;
-    } else if (DEBUG) {
-        printk(KERN_INFO "Set GPIO %d to 0\n", SOLENOID_GPIO);
-    }
+    gpio_set_value(SOLENOID_GPIO, 0);
 
     return 0;
 
