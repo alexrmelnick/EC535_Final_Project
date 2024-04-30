@@ -67,3 +67,5 @@ when the 2 of the 3 NFC tokens are in close proximity.
 - https://embetronicx.com/tutorials/linux/device-drivers/i2c-linux-device-driver-using-raspberry-pi/ 
 - https://embetronicx.com/tutorials/linux/device-drivers/i2c-bus-driver-dummy-linux-device-driver-using-raspberry-pi/
 - https://docs.kernel.org/i2c/writing-clients.html 
+- https://unboxnbeyond.wordpress.com/2020/06/12/i2c-communication-in-beagleboneblack/
+- https://onion.io/2bt-digging-into-i2cget-and-i2cset/
