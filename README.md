@@ -6,7 +6,7 @@ a solenoid lock. The antenna should respond/recognize different tokens and inter
 when the 2 of the 3 NFC tokens are in close proximity.
 
 ## Materials:
-- Beagleboard (1x)
+- Beaglebone Black (1x)
 - Antenna Module (NXP MFRC52202HN1) (1x)
 - NFC Tokens (S50) (3x) 
 - Linear Solenoid (uxcell a14092600ux0438) (1x) 
@@ -21,22 +21,39 @@ when the 2 of the 3 NFC tokens are in close proximity.
 - Userspace program (potentially)
 
 ## Pinout
-| MFRC522 | BeagleBoard        |
-|---------|--------------------|
-| SDA     | P9_17 (SPIO_CSO)   |
-| SCK     | P9_22 (SPIO_SCLK)  |
-| MOSI    | P9_18 (SPIO_D1)    |
-| MISO    | P9_21 (SPIO_DO)    |
-| IRQ     | P8_12 (GPIO_44)    |
-| GND     | P9_45 (DGND)       |
-| RST     | P8_10 (GPIO_68)    |
-| 3.3V    | P9_03 (VDD 3.3 V)  |
-|---------|--------------------|
-|Solenoid |                    |
-|---------|--------------------|
-| 4.5V    | P9_05 (VDD 5V)     |
-| GND     | P9_46 (DGND)       |
-| Control | P8_14 (GPIO_26)    |
+| BeagleBone Black   | MFRC522 | PN532     | Solenoid |
+|--------------------|---------|-----------|----------|
+| P9_17 (SPIO_CSO)   | SDA     |           |          |
+| P9_22 (SPIO_SCLK)  | SCK     |           |          |
+| P9_18 (SPIO_D1)    | MOSI    |           |          |
+| P9_21 (SPIO_DO)    | MISO    |           |          |
+| P8_12 (GPIO_44)    | IRQ     |           |          |
+| P9_45 (DGND)       | GND     |           |          |
+| P8_10 (GPIO_68)    | RST     |           |          |
+| P9_03 (VDD 3.3 V)  | 3.3V    |           |          |
+|--------------------|---------|-----------|----------|
+|                    |         | SCK       |          |
+|                    |         | M         |          |
+| P9_20 (I2C_SDA)    |         | MO/SDA/TX |          |
+| P9_19 (I2C2_SLC)   |         | NSS/SCL   |          |
+| P8_12 (GPIO_44)    |         | IRO       |          |
+| P8_10 (GPIO_68)    |         | RST       |          |
+| P9_45 (DGND)       |         | GND       |          |
+| P9_06 (VDD 5V)     |         | 5V        |          |
+|--------------------|---------|-----------|----------|
+| P9_05 (VDD 5V)     |         |           | Power    |
+| P9_46 (DGND)       |         |           | Ground   |
+| P8_14 (GPIO_26)    |         |           | Gate     |
+
+## Setup
+### PN532
+- SET0 -> H
+- SET1 -> L
+
+### Solenoid
+- Connect solenoid to across the diode
+- Connect the GPIO to the transistor gate
+- Connect 5V and GND to breadboard
 
 ## Further Reading
 - https://www.kernel.org/doc/html/v4.9/driver-api/spi.html
@@ -48,3 +65,5 @@ when the 2 of the 3 NFC tokens are in close proximity.
 - https://embetronicx.com/tutorials/tech_devices/i2c_1/ 
 - https://embetronicx.com/tutorials/tech_devices/i2c_2/
 - https://embetronicx.com/tutorials/linux/device-drivers/i2c-linux-device-driver-using-raspberry-pi/ 
+- https://embetronicx.com/tutorials/linux/device-drivers/i2c-bus-driver-dummy-linux-device-driver-using-raspberry-pi/
+- https://docs.kernel.org/i2c/writing-clients.html 
