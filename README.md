@@ -5,6 +5,9 @@ The project intends to program a beagleboard kernel module to interact with an a
 a solenoid lock. The antenna should respond/recognize different tokens and interact with the solenoid
 when the 2 of the 3 NFC tokens are in close proximity.
 
+## Project Video:
+https://youtu.be/ctBJeuU8Y2I
+
 ## Materials:
 - Beaglebone Black (1x)
 - Antenna Module (NXP MFRC52202HN1) (1x)
