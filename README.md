@@ -55,7 +55,7 @@ https://youtu.be/ctBJeuU8Y2I
 
 ### Solenoid
 - Connect solenoid to across the diode
-- Connect the GPIO to the transistor gate
+- Connect the GPIO to the transistor gate in series with the resistor
 - Connect 5V and GND to breadboard
 
 ## Further Reading
